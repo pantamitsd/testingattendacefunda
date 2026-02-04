@@ -1,69 +1,73 @@
 import streamlit as st
 from datetime import datetime
 
-st.set_page_config(page_title="Live GPS Location Fetch", page_icon="📍")
+st.set_page_config(page_title="Live GPS Location Fetch", page_icon="📍", layout="centered")
 
 st.title("📍 Live GPS Location Fetch (No Database)")
-st.caption("Tip: Button dabao → Browser me location allow karo")
+st.caption("Button dabao → Browser me location allow karo → Coordinates mil jayenge")
 
-st.markdown("### 👉 Click the button to fetch your live GPS location")
+# ---------------- GPS SCRIPT ----------------
+st.markdown("""
+<script>
+function getLocation(){
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      const params = new URLSearchParams(window.location.search);
+      params.set("lat", pos.coords.latitude);
+      params.set("lon", pos.coords.longitude);
+      window.location.search = params.toString();
+    },
+    function(err){
+      alert("Location denied. Please allow GPS access in browser settings.");
+      console.log(err);
+    }
+  );
+}
+</script>
+""", unsafe_allow_html=True)
 
-# ---- Button trigger ----
-clicked = st.button("📍 Get My Live Location")
+# ---------------- UI ----------------
+st.markdown("### 👉 Step 1: Click the button to fetch your live GPS location")
+st.markdown('<button onclick="getLocation()" style="padding:10px 16px; font-size:16px;">📍 Get My Live Location</button>', unsafe_allow_html=True)
 
-if clicked:
-    st.components.v1.html("""
-    <script>
-    navigator.geolocation.getCurrentPosition(
-        (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
+st.divider()
 
-            const url = new URL(window.location);
-            url.searchParams.set("lat", lat);
-            url.searchParams.set("lon", lon);
-
-            window.location.replace(url.toString());
-        },
-        (err) => {
-            alert("Location permission denied. Please allow GPS access.");
-            console.log(err);
-        }
-    );
-    </script>
-    """, height=0)
-
-# ---- Read Query Params ----
+# ---------------- READ QUERY PARAMS ----------------
 params = st.query_params
+
 lat = params.get("lat")
 lon = params.get("lon")
 
 if lat and lon:
-    lat = float(lat)
-    lon = float(lon)
+    try:
+        lat = float(lat)
+        lon = float(lon)
 
-    st.success("✅ Live GPS Coordinates Fetched")
+        st.success("✅ Live GPS Coordinates Fetched")
 
-    # Big visible, copy-friendly block
-    st.markdown("### 📌 Your Current Coordinates")
-    st.code(f"Latitude:  {lat}\nLongitude: {lon}", language="text")
+        # Big visible block (copy-friendly)
+        st.markdown("### 📌 Your Current Coordinates")
+        st.code(f"Latitude:  {lat}\nLongitude: {lon}", language="text")
 
-    # Nice metrics
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Latitude", f"{lat:.6f}")
-    c2.metric("Longitude", f"{lon:.6f}")
-    c3.metric("Status", "GPS Active")
+        # Nice metrics
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Latitude", f"{lat:.6f}")
+        c2.metric("Longitude", f"{lon:.6f}")
+        c3.metric("Status", "GPS Active")
 
-    # Last updated
-    st.caption(f"🕒 Last Updated: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}")
+        # Last updated
+        st.caption(f"🕒 Last Updated: {datetime.now().strftime('%d %b %Y, %I:%M:%S %p')}")
 
-    # Map view
-    st.map([{"lat": lat, "lon": lon}])
+        # Map
+        st.map([{"lat": lat, "lon": lon}])
 
+    except Exception as e:
+        st.error("❌ Invalid GPS values received.")
+        st.exception(e)
 else:
     st.warning("📡 GPS not fetched yet. Click the button above and allow location permission.")
 
-# ---- Optional Refresh Button ----
+# ---------------- REFRESH ----------------
 if st.button("🔄 Refresh Location"):
     st.query_params.clear()
     st.rerun()
